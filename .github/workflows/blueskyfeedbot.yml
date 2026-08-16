@@ -1,0 +1,45 @@
+name: Real Madrid X to Bluesky
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+concurrency:
+  group: real-madrid-feed
+
+jobs:
+  rss-to-bluesky:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate cache key
+        uses: actions/github-script@v6
+        id: generate-key
+        with:
+          script: |
+            core.setOutput('cache-key', new Date().valueOf())
+
+      - name: Retrieve cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/blueskyfeedbot
+          key: feed-cache-${{ steps.generate-key.outputs.cache-key }}
+          restore-keys: feed-cache-
+
+      - name: Post Real Madrid feed to Bluesky
+        uses: joschi/blueskyfeedbot@v1
+        with:
+          rss-feed: https://rss.xcancel.com/realmadrid/rss
+
+          template: |
+            {{item.title}}
+
+            {{item.link}}
+
+          service-url: https://bsky.social
+          username: ${{ secrets.BLUESKY_USERNAME }}
+          password: ${{ secrets.BLUESKY_PASSWORD }}
+
+          cache-file: ${{ github.workspace }}/blueskyfeedbot/cache.json
+
+          initial-post-limit: 1
