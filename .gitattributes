@@ -1,0 +1,3 @@
+# Los workflows llevan dentro scripts de bash que se ejecutan en runners Linux.
+# Sin esto, Git en Windows podria colar retornos de carro y romperlos.
+* text=auto eol=lf

@@ -1,0 +1,14 @@
+{
+  "name": "real-madrid-bluesky",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Replica en Bluesky las publicaciones de @realmadrid en X",
+  "scripts": {
+    "post": "node scripts/post-to-bluesky.mjs"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.13.35",
+    "fast-xml-parser": "^5.11.0"
+  }
+}

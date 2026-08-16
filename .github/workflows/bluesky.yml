@@ -1,0 +1,55 @@
+name: Real Madrid X a Bluesky
+
+on:
+  schedule:
+    # GitHub no garantiza la puntualidad de los cron y suele retrasarlos en
+    # horas punta; cada 10 minutos es un compromiso realista.
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Simular sin publicar en Bluesky'
+        type: boolean
+        default: false
+
+concurrency:
+  group: real-madrid-feed
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # La clave es unica en cada ejecucion para que la cache se guarde siempre;
+      # restore-keys recupera la version mas reciente de la ejecucion anterior.
+      - name: Generar clave de cache
+        id: clave
+        run: echo "valor=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Recuperar la cache de publicaciones ya enviadas
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: vistos-${{ steps.clave.outputs.valor }}
+          restore-keys: vistos-
+
+      - name: Publicar las novedades en Bluesky
+        env:
+          BLUESKY_USERNAME: ${{ secrets.BLUESKY_USERNAME }}
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+          CACHE_FILE: cache/vistos.json
+          MAX_POSTS_PER_RUN: '5'
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: npm run post

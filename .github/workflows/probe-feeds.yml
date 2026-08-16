@@ -1,0 +1,76 @@
+name: Sondeo de fuentes RSS
+
+# Este workflow NO publica nada en Bluesky.
+# Solo comprueba, desde las IPs de GitHub Actions, que fuentes RSS responden.
+# Ejecutalo a mano desde la pestana Actions -> "Sondeo de fuentes RSS" -> "Run workflow".
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Probar cada fuente candidata
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
+
+          FEEDS="
+          https://nitter.net/realmadrid/rss
+          https://nitter.privacyredirect.com/realmadrid/rss
+          https://nitter.tiekoetter.com/realmadrid/rss
+          https://nitter.space/realmadrid/rss
+          https://lightbrd.com/realmadrid/rss
+          https://rss.xcancel.com/realmadrid/rss
+          https://xcancel.com/realmadrid/rss
+          "
+
+          echo "IP publica de este runner: $(curl -s --max-time 10 https://api.ipify.org || echo desconocida)"
+          echo ""
+          printf '%-6s %-7s %-9s %-6s %s\n' HTTP FEED BYTES ITEMS FUENTE
+          echo "---------------------------------------------------------------------------"
+
+          OK=0
+          for f in $FEEDS; do
+            code=$(curl -s -o body.xml -w '%{http_code}' -L --max-time 30 -A "$UA" \
+                   -H 'Accept: application/rss+xml, application/xml, text/xml, */*' "$f" || echo 000)
+            bytes=$(wc -c < body.xml | tr -d ' ')
+
+            if grep -qE '<rss|<feed' body.xml; then
+              feed=SI
+              items=$(grep -c '<item>' body.xml || true)
+              OK=$((OK+1))
+            else
+              feed=no
+              items=0
+            fi
+
+            printf '%-6s %-7s %-9s %-6s %s\n' "$code" "$feed" "$bytes" "$items" "$f"
+
+            # Si no es un feed valido, enseña el principio de la respuesta para saber por que
+            if [ "$feed" = "no" ] && [ "$bytes" -gt 0 ]; then
+              echo "       motivo: $(head -c 150 body.xml | tr -d '\n' | tr -s ' ')"
+            fi
+          done
+
+          echo ""
+          if [ "$OK" -gt 0 ]; then
+            echo "RESULTADO: $OK fuente(s) funcionan desde GitHub Actions."
+            echo "Mira arriba cual tiene FEED=SI y usa esa en el workflow de publicacion."
+          else
+            echo "RESULTADO: ninguna fuente funciona desde las IPs de GitHub Actions."
+            echo "Habria que ejecutar el bot desde tu propio PC en lugar de aqui."
+          fi
+
+      - name: Mostrar las ultimas entradas de la fuente que funcione
+        if: always()
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
+          if grep -qE '<rss|<feed' body.xml 2>/dev/null; then
+            echo "Ultimas entradas descargadas:"
+            grep -o '<title>[^<]*</title>' body.xml | head -6
+            grep -o '<pubDate>[^<]*</pubDate>' body.xml | head -3
+          else
+            echo "La ultima fuente probada no devolvio un feed valido; nada que mostrar."
+          fi
