@@ -11,6 +11,10 @@ on:
         description: 'Simular sin publicar en Bluesky'
         type: boolean
         default: false
+      test_post:
+        description: 'Publicar un unico post de prueba (ignora el feed y la cache)'
+        type: boolean
+        default: false
 
 concurrency:
   group: real-madrid-feed
@@ -52,4 +56,5 @@ jobs:
           CACHE_FILE: cache/vistos.json
           MAX_POSTS_PER_RUN: '5'
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          TEST_POST: ${{ inputs.test_post || 'false' }}
         run: npm run post

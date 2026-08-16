@@ -152,6 +152,34 @@ async function main() {
     throw new Error('Faltan los secrets BLUESKY_USERNAME o BLUESKY_PASSWORD');
   }
 
+  // Modo de prueba: publica un unico post marcado como test, sin tocar el
+  // feed ni la cache. Sirve para confirmar que el login y la publicacion
+  // funcionan de verdad, sin depender de que haya contenido nuevo en X.
+  if (process.env.TEST_POST === 'true') {
+    const texto = `🧪 Prueba del bot real-madrid-bluesky. Todo funciona correctamente. (${new Date().toISOString()})`;
+
+    if (DRY_RUN) {
+      console.log(`[simulacion de prueba]\n${texto}`);
+      return;
+    }
+
+    const agent = new AtpAgent({ service: process.env.SERVICE_URL ?? 'https://bsky.social' });
+    await agent.login({ identifier: usuario, password: contrasena });
+
+    const rt = new RichText({ text: texto });
+    await rt.detectFacets(agent);
+    await agent.post({
+      $type: 'app.bsky.feed.post',
+      text: rt.text,
+      facets: rt.facets,
+      langs: ['es'],
+      createdAt: new Date().toISOString()
+    });
+
+    console.log('Post de prueba publicado correctamente.');
+    return;
+  }
+
   const entradas = extraerEntradas(await descargarFeed());
   console.log(`Entradas en el feed: ${entradas.length}`);
 
