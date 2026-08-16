@@ -2,9 +2,9 @@ name: Real Madrid X a Bluesky
 
 on:
   schedule:
-    # GitHub no garantiza la puntualidad de los cron y suele retrasarlos en
-    # horas punta; cada 10 minutos es un compromiso realista.
-    - cron: '*/10 * * * *'
+    # 5 minutos es el minimo que permite GitHub para workflows programados;
+    # ademas no garantiza la puntualidad y suele retrasarlos en horas punta.
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:
